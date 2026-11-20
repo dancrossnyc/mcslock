@@ -1,13 +1,19 @@
+#[inline(never)]
+fn count(lock: &mcslock::Lock<u32>, niters: u16) {
+    for _ in 0..niters {
+        let mut v = lock.lock();
+        *v += 1;
+        std::thread::yield_now();
+    }
+}
+
+#[inline(never)]
 fn threaded_add(nthread: u16, niter: u16) -> u32 {
     let lock = mcslock::Lock::new(0);
     std::thread::scope(|scope| {
         for _ in 0..nthread {
             scope.spawn(|| {
-                for _ in 0..niter {
-                    let mut v = lock.lock();
-                    *v += 1;
-                    std::thread::yield_now();
-                }
+                count(&lock, niter);
             });
         }
     });
@@ -28,6 +34,6 @@ fn main() {
     unsafe {
         lock.force_unlock();
     }
-    let v = threaded_add(16, 128);
+    let v = threaded_add(4, 128);
     println!("v = {v}");
 }
